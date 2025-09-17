@@ -41,117 +41,119 @@ Please complete the following tasks.
 **1. For interval or ratio scale variables run suitable normality tests to check whether their distribution is close to the normal distribution. Formulate hypothesis. Create graphs to compare the variables’ distributions with the normal distribution. Make conclusions.**
 """
 
-df = pd.read_csv('ai_job_dataset.csv')
-
-df
-
-print(df.columns)
-
-"""Based on the variable descriptions and common statistical definitions:
-
-*   **`salary_usd`**: This is a **ratio** variable. A salary of $0 indicates the complete absence of a salary.
-*   **`years_experience`**: This is a **ratio** variable. 0 years means no experience.
-*   **`job_description_length`**: This is a **ratio** variable.
-*   **`remote_ratio`**: This represents a percentage (0, 50, 100) and can be treated as a **ratio** variable as 0 means no remote work
-*   **`benefits_score`**: This is likely an **interval** variable. The scale (1-10) has equal intervals
-
-"""
-
 import pandas as pd
 from scipy import stats
+from scipy.stats import kstest, norm
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
 import numpy as np
+import math
+from math import sqrt
+import seaborn as sns
 
-interval_ratio_vars = ['salary_usd', 'years_experience', 'job_description_length', 'remote_ratio', 'benefits_score']
-alpha = 0.05
+df = pd.read_csv('ai_job_dataset.csv')
 
-for var in interval_ratio_vars:
-    print(f"Analyzing variable: {var}")
-    data = df[var].dropna()
+# Install the pingouin library for partial correlation (if needed)
+!pip install pingouin
 
-    if len(data) < 3:
-        print(f"  Not enough data points ({len(data)}) to perform normality tests for {var}.")
-        print("-" * 50)
-        continue
+df
 
-    try:
-        ks_statistic, ks_pvalue = stats.kstest(data, 'norm', args=(data.mean(), data.std()))
-        print(f"  Kolmogorov-Smirnov Test:")
-        print(f"    Statistic: {ks_statistic:.4f}")
-        print(f"    P-value: {ks_pvalue:.4f}")
-    except Exception as e:
-         print(f"  Could not perform Kolmogorov-Smirnov test for {var}: {e}")
-         ks_pvalue = None
+interval_variable = ["salary_usd", "remote_ratio", "years_experience", "job_description_length", "benefits_score"]
+df[interval_variable]
 
+from scipy.stats import norm
 
-    print("  Interpretation of Test Results:")
-    if ks_pvalue is not None:
-        if ks_pvalue < alpha:
-             print(f"    With a p-value ({ks_pvalue:.4f}) less than alpha ({alpha}), we reject the null hypothesis.")
-             print("    Conclusion: The distribution is significantly different from a normal distribution based on the Kolmogorov-Smirnov test.")
-        else:
-             print(f"    With a p-value ({ks_pvalue:.4f}) greater than or equal to alpha ({alpha}), we fail to reject the null hypothesis.")
-             print("    Conclusion: The distribution is not significantly different from a normal distribution based on the Kolmogorov-Smirnov test.")
-    else:
-        print("    Kolmogorov-Smirnov test was not performed or failed.")
+vars = interval_variable
+n = len(vars)
+ncols = 3
+nrows = math.ceil(n / ncols)
 
+fig, axes = plt.subplots(nrows, ncols, figsize=(ncols*4, nrows*3))
+axes = axes.flatten()
 
-    plt.figure(figsize=(10, 6))
-    sns.histplot(data, kde=True, bins=50)
-    plt.title(f'Distribution of {var} with KDE')
-    plt.xlabel(var)
-    plt.ylabel('Frequency')
-    plt.show()
+for i, var in enumerate(vars):
+    ax = axes[i]
+    # ax.hist(df[var].dropna(), bins=20)
 
-    # Q-Q Plot
-    plt.figure(figsize=(8, 8))
-    sm.qqplot(data, line='s')
-    plt.title(f'Q-Q Plot of {var}')
-    plt.show()
+    sns.distplot(df[var].dropna(), ax=ax, fit=norm)
 
-    print("-" * 50) # Separator for clarity between variables
+    ax.set_title(var)
+    ax.set_ylabel('Frequency')
+
+for ax in axes[n:]:
+    ax.set_visible(False)
+
+plt.tight_layout()
+plt.show()
+
+print("USD Salary:")
+stats.kstest(df['salary_usd'].dropna(),
+             'norm', args=(df['salary_usd'].dropna().mean(),
+                           df['salary_usd'].dropna().std()))
+
+print("Remote Ratio:")
+stats.kstest(df['remote_ratio'].dropna(),
+             'norm', args=(df['remote_ratio'].dropna().mean(),
+                           df['remote_ratio'].dropna().std()))
+
+print("year experience:")
+stats.kstest(df['years_experience'].dropna(),
+             'norm', args=(df['years_experience'].dropna().mean(),
+                           df['years_experience'].dropna().std()))
+
+print("job description lenght:")
+stats.kstest(df['job_description_length'].dropna(),
+             'norm', args=(df['job_description_length'].dropna().mean(),
+                           df['job_description_length'].dropna().std()))
+
+print("benefit score:")
+stats.kstest(df['benefits_score'].dropna(),
+             'norm', args=(df['benefits_score'].dropna().mean(),
+                           df['benefits_score'].dropna().std()))
+
+pg.qqplot(df['salary_usd'], dist='norm')
+plt.title('SALARY USD')
+plt.show()
+
+pg.qqplot(df['remote_ratio'], dist = 'norm')
+plt.title('REMOTE RATIO')
+plt.show()
+
+pg.qqplot(df['years_experience'], dist = 'norm')
+plt.title('YEAR EXPERIENCE')
+plt.show()
+
+pg.qqplot(df['job_description_length'], dist = 'norm')
+plt.title('JOB DESCRIPTION')
+plt.show()
+
+pg.qqplot(df['benefits_score'], dist = 'norm')
+plt.title('BENEFIT SCORE')
+plt.show()
 
 """**HYPOTHESIS after comparation**
-* Salary (salary_usd)
-Histogram: right skewed (long tail).
-Q–Q plot: deviation
-KS statistic = 0.1063
-Not normal
+* `Salary USD`
+p-value < 0.05, H0 is rejected, H1 is not rejected => the distribution of salary_usd is significantly different from normal
 
-* Years of experience
-Histogram: skewed.
-Q–Q plot: deviation from diagonal.
-KS statistic = 0.1577.
-Not normal.
+* `Years of experience`
+p-value < 0.05, H0 is rejected, H1 is not rejected => the distribution of years_experience is significantly different from normal
 
-* Job description length
-Histogram: somewhat bell-shaped but still skewed.
-Q–Q plot: points follow the diagonal, but deviate at tails.
-KS statistic = 0.0585
-Close to normal
+* `Job description length`
+p-value < 0.05, H0 is rejected, H1 is not rejected => the distribution of job_description_length is significantly different from normal
 
-* Remote ratio
-Histogram: only three discrete values (0, 50, 100).
-Q–Q plot: difficult to analyze
-KS statistic = 0.2257 bad deviation.
-not normal (look more like categorical than not ratio).
 
-* Benefits score
-Histogram: bounded between 1–10, discrete-like distribution.
-Q–Q plot: deviates
-KS statistic = 0.0697
-Not normal
+* `Remote ratio`
+as p-value < 0.05, H0 is rejected, H1 is not rejected => the distribution of remote_ratio is significantly different from normal
+
+* `Benefits score`
+p-value < 0.05, H0 is rejected, H1 is not rejected => the distribution of benefits_score is significantly different from normal
 
 **Job description length is found out to be close to normal**
 
 **2. Run a chi-square test to analyze the relationship between categorical variables. You can take the existing variables or create new categorical variables based on interval or ratio scale variables. Explain why the chi-square test is applicable to analyze the relationship between the selected pairs of variables. Create a contingency table based on these variables and describe the tendencies that you can observe in frequency distribution. Formulate hypotheses for the chi-square test, interpret the results of analysis and make conclusions. Create a suitable graph to demonstrate the relationship between the selected variables.**
-"""
 
-
-
-"""**Relationship test**
+**Relationship test**
 
 are higher education level categories more frequent for senior or executive roles?
 
@@ -159,69 +161,35 @@ are higher education level categories more frequent for senior or executive role
 hypotheses for the chi-square test:
 * Null Hypothesis (H0): There is no significant association between {var1} and {var2}.
 * Alternative Hypothesis (H1): There is a significant association between {var1} and {var2}.
-
 """
 
-from scipy.stats import chi2_contingency
+ct_com_rem = pd.crosstab(df['experience_level'], df['education_required'])
+ct_com_rem
 
-var1 = 'experience_level'
-var2 = 'education_required'
+stats.chi2_contingency(ct_com_rem)
 
-contingency_table = pd.crosstab(df[var1], df[var2])
-print(f"Contingency Table of {var1} vs {var2}:")
-display(contingency_table)
+print('chi2 = ', stats.chi2_contingency(ct_com_rem)[0], '   p-value =', stats.chi2_contingency(ct_com_rem)[1])
 
-# Chi-Square Test
-chi2_statistic, p_value, dof, expected_frequencies = chi2_contingency(contingency_table)
+df.groupby(['experience_level'])['education_required'].value_counts().unstack().plot(kind='bar', stacked=True)
 
-print(f"\nChi-Square Test Results for {var1} vs {var2}:")
-print(f"  Chi-Square Statistic: {chi2_statistic:.4f}")
-print(f"  P-value: {p_value:.4f}")
-print(f"  Degrees of Freedom: {dof}")
+"""H1: there is a relationship between the experience level and the education required
 
-alpha = 0.05
-print("\nInterpretation and Conclusion:")
-if p_value < alpha:
-    print(f"  With a p-value ({p_value:.4f}) less than alpha ({alpha}), we reject the null hypothesis.")
-    print(f"  Conclusion: There is a statistically significant association between {var1} and {var2}.")
-    print("  This suggests that the distribution of required education levels is dependent on the experience level.")
-else:
-    print(f"  With a p-value ({p_value:.4f}) greater than or equal to alpha ({alpha}), we fail to reject the null hypothesis.")
-    print(f"  Conclusion: There is no statistically significant association between {var1} and {var2}.")
-    print("  This suggests that the distribution of required education levels is independent of the experience level.")
+H0: there is no relationship between the experience level and the education required
 
-plt.figure(figsize=(10, 7))
-sns.heatmap(contingency_table, annot=True, fmt='d', cmap='Blues')
-plt.title(f'Relationship between {var1} and {var2}')
-plt.xlabel(var2)
-plt.ylabel(var1)
-plt.show()
+p-value > 0.05
 
-contingency_table.plot(kind='bar', stacked=True, figsize=(10, 7))
-plt.title(f'Relationship between {var1} and {var2} (Stacked Bar Chart)')
-plt.xlabel(var1)
-plt.ylabel('Frequency')
-plt.xticks(rotation=0)
-plt.legend(title=var2)
-plt.show()
+p-value > 0.01
 
-"""The chi-square test for independence is applicable here because we are examining the relationship between two categorical variables: 'experience_level' and 'salary_category'.
-We want to determine if there is a statistically significant association between. the level of experience and the salary category. The test compares the observed frequencies in a contingency table to the frequencies that would be expected if the two variables were independent.
+H1 is rejected both at 5% and at 1% level of significance, H0 is accepted.
+
+------------
 
 **Conclusion**
 
-P-value: 0.1517 means there is no statistically significant association between experience_level and education_required based on this test.
+P-value: 0.1517 means there is no relations between experience_level and education_required based
 
 **3. Calculate appropriate correlation coefficients between **any three pairs** of variables. Explain the selection of the correlation coefficient. Fill in the table below. Interpret the results. Create suitable graphs to visualize the analyzed relationships.**
 """
-
-# your code here
-
-
-
-from scipy.stats import pearsonr
-import matplotlib.pyplot as plt
-
 
 variable_pairs = [
     ('years_experience', 'benefits_score'),
@@ -313,39 +281,12 @@ display(correlation_table_df)
 
 """| Variables | Appropriate correlation coefficient(justification of the choice) | Hypotheses | Strength of the relationship | Direction of the relationship | Statistical significance of the relationship! |
 | --- | --- | --- | --- | --- | --- |
-| years_experience and benefits_score  | Pearson - Both are continuous interval/ratio | H0 | weak | negative | Not significant (p=0.3730 >= 0.05) |
-| salary_usd and years_experience | Pearson - Both are continuous interval/ratio  | H1 | strong | positive | Significant (p=0.0000 < 0.05) |
-| salary_usd and benefits_score | Pearson - Both are continuous interval/ratio | H0 | weak | negative | Not Significant (p=0.9040 >= 0.05) |
+| years_experience and benefits_score  | Pearson - Both are continuous interval/ratio | H0 | weak (r= -0.0073) | negative | Not significant (p=0.3730 >= 0.05) |
+| salary_usd and years_experience | Pearson - Both are continuous interval/ratio  | H1 | strong (r=0.7376) | positive | Significant (p=0.0000 < 0.05) |
+| salary_usd and benefits_score | Pearson - Both are continuous interval/ratio | H0 | weak (r= 0.0010)| negative | Not Significant (p=0.9040 >= 0.05) |
 
 **4. Calculate a paired correlation coefficient between any variables. Then calculate the partial correlation coefficient between the same pair of variables controlling for any other third variable. Interpret the results of analysis. Create suitable graphs to visualize the analyzed relationships.**
 """
-
-# Install the pingouin library for partial correlation (if needed)
-!pip install pingouin
-
-import pingouin as pg
-
-df['salary_usd'] = pd.to_numeric(df['salary_usd'], errors='coerce')
-
-subset = df[['salary_usd', 'years_experience', 'benefits_score']].dropna()
-
-corr, p_val = pearsonr(subset['salary_usd'], subset['years_experience'])
-
-partial_corr = pg.partial_corr(data=subset,
-                               x='salary_usd',
-                               y='years_experience',
-                               covar='benefits_score',
-                               method='pearson')
-
-plt.scatter(subset['years_experience'], subset['salary_usd'], alpha=0.6)
-m, b = np.polyfit(subset['years_experience'], subset['salary_usd'], 1)
-plt.plot(subset['years_experience'], m*subset['years_experience'] + b, color='red')
-plt.xlabel("Years of Experience")
-plt.ylabel("Salary (USD)")
-plt.title("Salary vs Years of Experience")
-plt.show()
-
-(corr, p_val, partial_corr)
 
 X1 = sm.add_constant(subset['benefits_score'])
 model1 = sm.OLS(subset['salary_usd'], X1).fit()
@@ -358,20 +299,77 @@ partial_corr_value, partial_pval = pearsonr(resid_salary, resid_experience)
 
 (corr, p_val, partial_corr_value, partial_pval)
 
-"""* r = 0.737583 = The correlation coefficient.
+df1 = df.dropna(subset=['salary_usd', 'years_experience'])
+stats.spearmanr(df1['salary_usd'], df1['years_experience'])
 
-This means there’s a strong positive relationship between the two variables (salary and years of experience).
+df = df.dropna(subset=['salary_usd', 'years_experience', 'benefits_score'])
+a_bc = stats.spearmanr(df['salary_usd'], df['years_experience'])[0]
+a_bd = stats.spearmanr(df['salary_usd'], df['benefits_score'])[0]
+a_cd = stats.spearmanr(df['years_experience'], df['benefits_score'])[0]
+a_bc_d = (a_bc - a_bd * a_cd) / sqrt((1 - a_bd ** 2) * (1 - a_cd ** 2))
+print('Paired correlation between salary_usd and year_experience: ',a_bc)
+print('Partial correlation between salary_usd and year_experience, controlling for benefits_score: ',a_bc_d)
 
-* CI95% = [0.73, 0.74] → The 95% confidence interval for the correlation.
+pg.partial_corr(data=df, x='salary_usd',
+                y='years_experience', covar='job_description_length', method = 'spearman')
 
-CI95% confident that the true correlation lies between 0.73 and 0.74. estimate is very precise due to the large sample size.
+subset = df.dropna(subset=['salary_usd', 'years_experience', 'benefits_score'])
+X1 = sm.add_constant(subset['benefits_score'])
 
-* p-val = 0.0 = The p-value is effectively zero.
+model1 = sm.OLS(subset['salary_usd'], X1).fit()
+resid_salary = model1.resid
 
-This means the correlation is highly statistically significant.
+model2 = sm.OLS(subset['years_experience'], X1).fit()
+resid_experience = model2.resid
 
-Salary and years of experience are strongly and positively correlated.
-The relationship is statistically significant (p < 0.001).
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=resid_experience, y=resid_salary, alpha=0.5)
+sns.regplot(x=resid_experience, y=resid_salary, scatter=False, color='red')
+plt.title('Partial Relationship: Salary USD vs Years Experience\ncontrolling for Benefits Score')
+plt.xlabel('Years of Experience (partial residuals)')
+plt.ylabel('Salary USD (partial residuals)')
+plt.grid(True)
+plt.show()
 
-Confidence intervals show that the correlation consistently falls between 0.73 and 0.74, which confirms reliability.
+subset2 = df.dropna(subset=['salary_usd', 'years_experience', 'benefits_score'])
+X2 = sm.add_constant(subset2['salary_usd'])
+
+model3 = sm.OLS(subset2['years_experience'], X2).fit()
+resid_experience2 = model3.resid
+
+model4 = sm.OLS(subset2['benefits_score'], X2).fit()
+resid_benefits = model4.resid
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=resid_benefits, y=resid_experience2, alpha=0.5)
+sns.regplot(x=resid_benefits, y=resid_experience2, scatter=False, color='red')
+plt.title('Partial Relationship: Years Experience vs Benefits Score\ncontrolling for Salary USD')
+plt.xlabel('Benefits Score (partial residuals)')
+plt.ylabel('Years of Experience (partial residuals)')
+plt.grid(True)
+plt.show()
+
+subset3 = df.dropna(subset=['salary_usd', 'years_experience', 'benefits_score'])
+X3 = sm.add_constant(subset3['years_experience'])
+
+model5 = sm.OLS(subset3['salary_usd'], X3).fit()
+resid_salary3 = model5.resid
+
+model6 = sm.OLS(subset3['benefits_score'], X3).fit()
+resid_benefits3 = model6.resid
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=resid_benefits3, y=resid_salary3, alpha=0.5)
+sns.regplot(x=resid_benefits3, y=resid_salary3, scatter=False, color='red')
+plt.title('Partial Relationship: Salary USD vs Benefits Score\ncontrolling for Years Experience')
+plt.xlabel('Benefits Score (partial residuals)')
+plt.ylabel('Salary USD (partial residuals)')
+plt.grid(True)
+plt.show()
+
+"""r = 0.737583 = positive relationship between the two variables (salary and years of experience).
+
+CI95% = [0.79, 0.8] = CI95% confident that the true correlation lies between 0.79 and 0.8
+
+p-val = 0.0 = correlation is significant.
 """
