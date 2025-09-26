@@ -1,0 +1,1 @@
+https://github.com/alanprawira/data-analyst/blob/main/week2/Denune%20Galang%20Prawira.ipynb
